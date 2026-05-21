@@ -1,0 +1,26 @@
+# ============================================================================
+# .gitignore — Simulador de Gerenciamento de Processos
+# ============================================================================
+
+# Binários compilados
+simulador
+teste_estruturas
+
+# Arquivos objeto
+*.o
+src/*.o
+tests/*.o
+
+# Diretório de build (se usado futuramente)
+build/
+
+# Arquivos de editor
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
