@@ -48,5 +48,6 @@ int main(void) {
         processo_controle(pipefd);
     }
 
+
     return EXIT_SUCCESS;
 }

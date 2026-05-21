@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 
 #include "gerenciador.h"
 #include "estruturas.h"
@@ -22,6 +23,7 @@
 #include "executor.h"
 #include "escalonador.h"
 #include "impressao.h"
+#define TAMANHO_BUFFER 256
 
 /**
  * Loop principal do processo gerenciador.
@@ -35,6 +37,22 @@
  */
 void processo_gerenciador(int pipefd[]) {
     char comando;
+    int opcao;
+    char nome_arquivo[TAMANHO_BUFFER];
+
+    /* Escolha: qual arquivo usar como programa init */
+    printf("Fonte do programa inicial (init):\n");
+    printf("  1 — Informar nome do arquivo\n");
+    printf("  2 — Usar arquivo padrão 'init'\n");
+    printf("Opção: ");
+    scanf("%d", &opcao);
+
+    if (opcao == 1) {
+        printf("Nome do arquivo: ");
+        scanf("%s", nome_arquivo);
+    } else {
+        strcpy(nome_arquivo, "init"); /* padrão da especificação */
+    }
 
     /* Fecha a ponta de escrita — gerenciador só lê do pipe */
     close(pipefd[1]);
@@ -61,6 +79,23 @@ void processo_gerenciador(int pipefd[]) {
     inicializar_estado_execucao(&execucao);
 
     printf("Estruturas de dados inicializadas.\n");
+
+    int num_instrucoes = 0;
+    Instrucao *programa = parser_carregar_programa(nome_arquivo, &num_instrucoes);
+    if (programa == NULL) {
+        fprintf(stderr, "[ERRO] Falha ao carregar programa '%s'\n", nome_arquivo);
+        close(pipefd[0]);
+        exit(1);
+    }
+
+    int idx = criar_processo(&tabela, -1, 0, tempo);
+    tabela.processos[idx].programa = programa;
+    tabela.processos[idx].tamanho_programa = num_instrucoes;
+    execucao.indice = idx;
+    tabela.processos[idx].estado = EXECUCAO;
+    /* TODO: trocar_contexto(&cpu, &tabela, -1, idx); */
+
+    printf("Gerenciador pronto. Programa '%s' carregado.\n\n", nome_arquivo);
 
     /* ---- Criar o primeiro processo simulado (init, PID 0) ---- */
 

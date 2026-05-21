@@ -38,6 +38,7 @@ Instrucao* parser_carregar_programa(const char *nome_arquivo, int *num_instrucoe
     /* Stub: a ser implementado */
     (void)nome_arquivo;
     (void)num_instrucoes;
+    
 
     fprintf(stderr, "[STUB] parser_carregar_programa: não implementado ainda\n");
     return NULL;
