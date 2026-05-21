@@ -35,25 +35,12 @@
  *    - I: dispara processo de impressão
  *    - M: imprime e finaliza
  */
-void processo_gerenciador(int pipefd[]) {
+void processo_gerenciador(int pipefd[], int opcao_inicial, const char *nome_arquivo_inicial) {
     char comando;
-    int opcao;
     char nome_arquivo[TAMANHO_BUFFER];
-
-    /* Escolha: qual arquivo usar como programa init */
-    printf("Fonte do programa inicial (init):\n");
-    printf("  1 — Informar nome do arquivo\n");
-    printf("  2 — Usar arquivo padrão 'init'\n");
-    printf("Opção: ");
-    scanf("%d", &opcao);
-
-    if (opcao == 1) {
-        printf("Nome do arquivo: ");
-        scanf("%s", nome_arquivo);
-    } else {
-        strcpy(nome_arquivo, "init"); /* padrão da especificação */
-    }
-
+    
+    strncpy(nome_arquivo, nome_arquivo_inicial, TAMANHO_BUFFER - 1);
+    nome_arquivo[TAMANHO_BUFFER - 1] = '\0';
     /* Fecha a ponta de escrita — gerenciador só lê do pipe */
     close(pipefd[1]);
 
