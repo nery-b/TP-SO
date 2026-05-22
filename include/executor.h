@@ -24,33 +24,17 @@
 
 #include "estruturas.h"
 
-/**
- * Códigos de retorno da execução de instrução.
- * Indicam ao gerenciador que ação tomar após a execução.
- */
 typedef enum {
-    EXEC_OK,          /**< Instrução normal executada (D, V, A, S, N) */
-    EXEC_BLOQUEIO,    /**< Instrução B: processo deve ser bloqueado */
-    EXEC_TERMINO,     /**< Instrução T: processo terminou */
-    EXEC_FORK,        /**< Instrução F: novo processo criado */
-    EXEC_REPLACE,     /**< Instrução R: imagem substituída */
-    EXEC_ERRO         /**< Erro na execução */
+    EXEC_OK,  
+    EXEC_BLOQUEIO,  
+    EXEC_TERMINO,   
+    EXEC_FORK,      
+    EXEC_REPLACE    
 } ResultadoExecucao;
 
-/**
- * Executa a próxima instrução do processo atualmente na CPU.
- *
- * @param cpu       Ponteiro para a CPU (onde a instrução é executada)
- * @param tabela    Ponteiro para a TabelaDeProcessos (usado por F e T)
- * @param pronto    Ponteiro para a fila de prontos (usado por F)
- * @param bloqueado Ponteiro para a fila de bloqueados (usado por B)
- * @param execucao  Ponteiro para o estado de execução
- * @param tempo     Ponteiro para o tempo atual do simulador
- * @return Código de ResultadoExecucao indicando o resultado
- */
 ResultadoExecucao executar_instrucao(Cpu *cpu, TabelaDeProcessos *tabela,
                                      EstadoPronto *pronto,
                                      EstadoBloqueado *bloqueado,
                                      EstadoExecucao *execucao, int *tempo);
 
-#endif /* EXECUTOR_H */
+#endif

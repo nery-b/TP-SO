@@ -10,6 +10,10 @@
  *
  * @param pipefd Array com os descritores do pipe [leitura, escrita]
  */
-void processo_controle(int pipefd[]);
+
+
+void processo_controle(int pipefd[], int origem, const char *nome_arquivo);
+
+
 
 #endif /* CONTROLE_H */

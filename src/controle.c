@@ -13,57 +13,57 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <sys/wait.h>
 
 #include "controle.h"
 
-/**
- * Loop principal do processo controle.
- *
- * Fecha a ponta de leitura do pipe (só escreve), lê comandos do usuário
- * e os envia para o gerenciador. Encerra quando o comando 'M' é enviado.
- */
-void processo_controle(int pipefd[]) {
+void processo_controle(int pipefd[], int origem, const char *nome_arquivo) {
     char comando;
+    FILE *entrada = stdin; 
 
-    /* Fecha a ponta de leitura — controle só escreve no pipe */
-    close(pipefd[0]);
+    close(pipefd[0]); 
 
     printf("Processo controle iniciado.\n");
-    printf("Comandos disponíveis:\n");
-    printf("  U — Fim de uma unidade de tempo\n");
-    printf("  I — Imprimir estado atual do sistema\n");
-    printf("  M — Imprimir tempo médio e finalizar\n\n");
+
+    if (origem == 2) {
+        entrada = fopen(nome_arquivo, "r");
+        if (entrada == NULL) {
+            perror("[ERRO] Nao abriu arquivo de comandos. Usando terminal.");
+            entrada = stdin;
+            origem = 1;
+        } else {
+            printf("Lendo comandos do arquivo '%s'...\n", nome_arquivo);
+        }
+    } else {
+        printf("Comandos disponíveis: U, I, M\n\n");
+    }
 
     while (1) {
-        printf("Comando: ");
-        scanf(" %c", &comando);
+        if (origem == 1) printf("Comando: ");
 
-        /* Valida o comando */
-        if (comando != 'U' && comando != 'u' &&
-            comando != 'I' && comando != 'i' &&
-            comando != 'M' && comando != 'm') {
-            printf("Comando inválido. Digite apenas U, I ou M.\n");
+        if (fscanf(entrada, " %c", &comando) != 1) {
+            if (origem == 2) {
+                printf("\n[Controle] Fim do arquivo. Enviando 'M'.\n");
+                comando = 'M';
+            } else {
+                break;
+            }
+        }
+
+        if (comando >= 'a' && comando <= 'z') comando -= 32;
+
+        if (comando != 'U' && comando != 'I' && comando != 'M') {
+            if (origem == 1) printf("Comando inválido.\n");
             continue;
         }
 
-        /* Converte para maiúsculo */
-        if (comando >= 'a' && comando <= 'z') {
-            comando = comando - 'a' + 'A';
-        }
-
-        /* Envia o comando para o gerenciador via pipe */
         write(pipefd[1], &comando, sizeof(char));
-        printf("Controle enviou comando '%c' para o gerenciador.\n", comando);
-
-        if (comando == 'M') {
-            break;
+        if (origem == 2) {
+            printf("Controle enviou comando '%c' do arquivo.\n", comando);
+            sleep(1); 
         }
+
+        if (comando == 'M') break;
     }
 
-    /* Fecha a ponta de escrita e aguarda o gerenciador finalizar */
-    close(pipefd[1]);
-    wait(NULL);
-
-    printf("Processo controle finalizado.\n");
+    if (origem == 2 && entrada != stdin) fclose(entrada);
 }

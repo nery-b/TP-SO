@@ -19,33 +19,57 @@
 #include "executor.h"
 #include "parser.h"
 
-/**
- * Executa a próxima instrução na CPU.
- *
- * TODO: Implementar o switch para cada tipo de instrução:
- *
- *   N n     — Aloca vetor de n variáveis (calloc)
- *   D x     — Inicializa variável x com 0
- *   V x n   — cpu->variaveis[x] = n
- *   A x n   — cpu->variaveis[x] += n
- *   S x n   — cpu->variaveis[x] -= n
- *   B n     — Retorna EXEC_BLOQUEIO, seta tempo_bloqueio
- *   T       — Retorna EXEC_TERMINO
- *   F n     — Copia processo, cria filho, retorna EXEC_FORK
- *   R arq   — Carrega novo programa com parser, retorna EXEC_REPLACE
- */
 ResultadoExecucao executar_instrucao(Cpu *cpu, TabelaDeProcessos *tabela,
                                      EstadoPronto *pronto,
                                      EstadoBloqueado *bloqueado,
                                      EstadoExecucao *execucao, int *tempo) {
-    /* Stub: a ser implementado */
-    (void)cpu;
-    (void)tabela;
-    (void)pronto;
-    (void)bloqueado;
-    (void)execucao;
-    (void)tempo;
+                                         
+    if (cpu == NULL || cpu->programa == NULL || cpu->pc >= cpu->tamanho_programa) {
+        return EXEC_TERMINO; 
+    }
 
-    fprintf(stderr, "[STUB] executar_instrucao: não implementado ainda\n");
-    return EXEC_ERRO;
+    Instrucao inst = cpu->programa[cpu->pc];
+
+    switch (inst.tipo) {
+        case 'N':
+            if (cpu->variaveis != NULL) free(cpu->variaveis);
+            cpu->variaveis = calloc(inst.operando1, sizeof(int));
+            cpu->num_variaveis = inst.operando1;
+            return EXEC_OK;
+
+        case 'D':
+            if (inst.operando1 < cpu->num_variaveis) cpu->variaveis[inst.operando1] = 0;
+            return EXEC_OK;
+
+        case 'V':
+            if (inst.operando1 < cpu->num_variaveis) cpu->variaveis[inst.operando1] = inst.operando2;
+            return EXEC_OK;
+
+        case 'A':
+            if (inst.operando1 < cpu->num_variaveis) cpu->variaveis[inst.operando1] += inst.operando2;
+            return EXEC_OK;
+
+        case 'S':
+            if (inst.operando1 < cpu->num_variaveis) cpu->variaveis[inst.operando1] -= inst.operando2;
+            return EXEC_OK;
+
+        case 'B':
+            if (execucao != NULL && execucao->indice != -1) {
+                int indice_atual = execucao->indice; 
+                tabela->processos[indice_atual].tempo_bloqueio = inst.operando1;
+            }
+            return EXEC_BLOQUEIO;
+
+        case 'T':
+            return EXEC_TERMINO;
+
+        case 'F':
+            return EXEC_FORK;
+
+        case 'R':
+            return EXEC_REPLACE;
+
+        default:
+            return EXEC_OK;
+    }
 }
