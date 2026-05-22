@@ -28,8 +28,9 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init) {
 
     inicializar_cpu(&cpu);
     inicializar_tabela(&tabela);
-    bloqueado.inicio = 0; bloqueado.fim = 0; bloqueado.tamanho = 0;
-    execucao.indice = -1;
+    inicializar_estado_pronto(&pronto);
+    inicializar_estado_bloqueado(&bloqueado);
+    inicializar_estado_execucao(&execucao);
 
     int num_instrucoes = 0;
     Instrucao *programa = parser_carregar_programa(nome_arquivo, &num_instrucoes);
@@ -39,85 +40,103 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init) {
     }
     
     int idx = criar_processo(&tabela, -1, 0, tempo);
+    if (idx < 0) {
+        fprintf(stderr, "[ERRO] Não foi possível criar o processo inicial.\n");
+        exit(1);
+    }
+
     tabela.processos[idx].programa = programa;
     tabela.processos[idx].tamanho_programa = num_instrucoes;
-    execucao.indice = idx;
+    tabela.processos[idx].pc = 0;
     tabela.processos[idx].estado = EXECUCAO;
+    tabela.processos[idx].prioridade = 0;
+    tabela.processos[idx].tempo_cpu = 0;
+    tabela.processos[idx].variaveis = NULL;
+    tabela.processos[idx].num_variaveis = 0;
 
-    /* Carga manual na CPU (Proteção) */
-    cpu.pc = 0;
     cpu.programa = programa;
     cpu.tamanho_programa = num_instrucoes;
+    cpu.pc = 0;
     cpu.num_variaveis = 0;
     cpu.variaveis = NULL;
     cpu.quantum = obter_quantum(0);
     cpu.tempo_usado_quantum = 0;
+    execucao.indice = idx;
 
     printf("Gerenciador pronto. Programa '%s' carregado.\n\n", nome_arquivo);
 
     while (read(pipefd[0], &comando, sizeof(char)) > 0) {
         switch (comando) {
-            case 'U':
+            case 'U': {
                 tempo++;
                 printf("\n[t=%d] Comando U recebido.\n", tempo);
                 fflush(stdout);
 
                 if (execucao.indice == -1) {
-                    printf("[t=%d] CPU Ociosa.\n", tempo);
+                    printf("[t=%d] CPU ociosa.\n", tempo);
                     fflush(stdout);
                 } else {
                     int idx_atual = execucao.indice;
                     if (cpu.programa == NULL) {
                         printf("[ERRO] cpu.programa NULL!\n");
                     } else {
-                        printf("[t=%d] Executando PID %d (PC=%d)...\n", tempo, tabela.processos[idx_atual].pid, cpu.pc);
-                        
-                        ResultadoExecucao res = executar_instrucao(&cpu, &tabela, &pronto, &bloqueado, &execucao, &tempo);
-                        
-                        switch (res) {
-                            case EXEC_OK:
-                                cpu.pc++;
-                                break;
-                            case EXEC_BLOQUEIO:
-                                cpu.pc++;
-                                tabela.processos[idx_atual].estado = BLOQUEADO;
-                                execucao.indice = -1; 
-                                break;
-                            case EXEC_TERMINO:
-                                liberar_processo(&tabela, idx_atual);
-                                execucao.indice = -1; 
-                                break;
-                            default:
-                                cpu.pc++; 
-                                break;
+                        printf("[t=%d] Executando PID %d (PC=%d, prio=%d)...\n",
+                               tempo,
+                               tabela.processos[idx_atual].pid,
+                               cpu.pc,
+                               tabela.processos[idx_atual].prioridade);
+                        fflush(stdout);
+
+                        ResultadoExecucao res = executar_instrucao(&cpu, &tabela,
+                                                                   &pronto, &bloqueado,
+                                                                   &execucao, &tempo);
+                        ProcessoSimulado *proc = &tabela.processos[idx_atual];
+
+                        if (res == EXEC_OK) {
+                            proc->tempo_cpu++;
+                            proc->pc = cpu.pc;
+                            proc->variaveis = cpu.variaveis;
+                            proc->num_variaveis = cpu.num_variaveis;
+
+                            cpu.tempo_usado_quantum++;
+                            if (cpu.tempo_usado_quantum >= cpu.quantum) {
+                                if (proc->prioridade < NUM_PRIORIDADES - 1) {
+                                    proc->prioridade++;
+                                }
+                                proc->estado = PRONTO;
+                                enfileirar_pronto(&pronto, idx_atual, proc->prioridade);
+                                execucao.indice = -1;
+                            }
+                        } else if (res == EXEC_BLOQUEIO) {
+                            proc->pc = cpu.pc;
+                            proc->variaveis = cpu.variaveis;
+                            proc->num_variaveis = cpu.num_variaveis;
+                            proc->estado = BLOQUEADO;
+                            enfileirar(&bloqueado, idx_atual);
+                            if (proc->prioridade > 0) proc->prioridade--;
+                            execucao.indice = -1;
+                        } else if (res == EXEC_TERMINO) {
+                            proc->pc = cpu.pc;
+                            proc->variaveis = cpu.variaveis;
+                            proc->num_variaveis = cpu.num_variaveis;
+                            liberar_processo(&tabela, idx_atual);
+                            execucao.indice = -1;
                         }
                     }
                 }
 
-                /* Escalonador Temporário */
-                if (execucao.indice == -1) {
-                    for (int i = 0; i < MAX_PROCESSOS; i++) {
-                        if (tabela.processos[i].ativo && tabela.processos[i].estado == PRONTO) {
-                            execucao.indice = i;
-                            tabela.processos[i].estado = EXECUCAO;
-                            cpu.pc = tabela.processos[i].pc;
-                            cpu.programa = tabela.processos[i].programa;
-                            cpu.tamanho_programa = tabela.processos[i].tamanho_programa;
-                            cpu.num_variaveis = tabela.processos[i].num_variaveis;
-                            cpu.variaveis = tabela.processos[i].variaveis;
-                            printf("[TESTE] Processo PID %d escalonado.\n", tabela.processos[i].pid);
-                            break;
-                        }
-                    }
-                }
+                atualizar_bloqueados(&tabela, &pronto, &bloqueado);
+                escalonar(&cpu, &tabela, &pronto, &bloqueado, &execucao);
                 break;
-
+            }
             case 'I':
                 printf("\n[t=%d] Imprimindo estado do sistema...\n", tempo);
                 criar_processo_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
                 break;
 
             case 'M':
+                printf("\n[t=%d] Encerrando simulador e exibindo estatísticas finais...\n", tempo);
+                criar_processo_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
                 goto fim_loop;
         }
     }
