@@ -32,67 +32,105 @@
  *      a. Aumentar prioridade do processo (max 0)
  *   4. Atualizar processos bloqueados (decrementar tempo)
  */
+static int prioridade_mais_alta_pronto(EstadoPronto *pronto) {
+    if (pronto == NULL) return -1;
+
+    for (int p = 0; p < NUM_PRIORIDADES; p++) {
+        if (!fila_vazia(&pronto->filas[p])) {
+            return p;
+        }
+    }
+    return -1;
+}
+
 void escalonar(Cpu *cpu, TabelaDeProcessos *tabela,
                EstadoPronto *pronto, EstadoBloqueado *bloqueado,
                EstadoExecucao *execucao) {
-    /* Stub: a ser implementado */
-    (void)cpu;
-    (void)tabela;
-    (void)pronto;
-    (void)bloqueado;
-    (void)execucao;
+    if (cpu == NULL || tabela == NULL || pronto == NULL || bloqueado == NULL || execucao == NULL) {
+        return;
+    }
 
-    fprintf(stderr, "[STUB] escalonar: não implementado ainda\n");
+    int indice_antigo = execucao->indice;
+    if (indice_antigo >= 0 && indice_antigo < MAX_PROCESSOS) {
+        ProcessoSimulado *proc = &tabela->processos[indice_antigo];
+        int top_prioridade = prioridade_mais_alta_pronto(pronto);
+
+        if (top_prioridade >= 0 && top_prioridade < proc->prioridade) {
+            proc->estado = PRONTO;
+            enfileirar_pronto(pronto, indice_antigo, proc->prioridade);
+            execucao->indice = -1;
+        } else if (cpu->tempo_usado_quantum >= cpu->quantum) {
+            if (proc->prioridade < NUM_PRIORIDADES - 1) {
+                proc->prioridade++;
+            }
+            proc->estado = PRONTO;
+            enfileirar_pronto(pronto, indice_antigo, proc->prioridade);
+            execucao->indice = -1;
+        }
+    }
+
+    if (execucao->indice == -1) {
+        int proximo = desenfileirar_pronto(pronto);
+        if (proximo >= 0) {
+            trocar_contexto(cpu, tabela, indice_antigo, proximo);
+            tabela->processos[proximo].estado = EXECUCAO;
+            execucao->indice = proximo;
+        } else {
+            trocar_contexto(cpu, tabela, indice_antigo, -1);
+        }
+    }
 }
 
-/**
- * Realiza a troca de contexto entre dois processos.
- *
- * TODO: Implementar:
- *
- *   1. Se indice_antigo >= 0 (existe processo saindo):
- *      - Salvar cpu->pc       → tabela->processos[antigo].pc
- *      - Salvar cpu->programa → tabela->processos[antigo].programa
- *      - Salvar cpu->variaveis→ tabela->processos[antigo].variaveis
- *      - (e demais campos)
- *
- *   2. Carregar processo novo:
- *      - cpu->programa  = tabela->processos[novo].programa
- *      - cpu->pc        = tabela->processos[novo].pc
- *      - cpu->variaveis = tabela->processos[novo].variaveis
- *      - cpu->quantum   = obter_quantum(tabela->processos[novo].prioridade)
- *      - cpu->tempo_usado_quantum = 0
- */
 void trocar_contexto(Cpu *cpu, TabelaDeProcessos *tabela,
                      int indice_antigo, int indice_novo) {
-    /* Stub: a ser implementado */
-    (void)cpu;
-    (void)tabela;
-    (void)indice_antigo;
-    (void)indice_novo;
+    if (cpu == NULL || tabela == NULL) return;
 
-    fprintf(stderr, "[STUB] trocar_contexto: não implementado ainda\n");
+    if (indice_antigo >= 0 && indice_antigo < MAX_PROCESSOS) {
+        ProcessoSimulado *antigo = &tabela->processos[indice_antigo];
+        antigo->pc = cpu->pc;
+        antigo->programa = cpu->programa;
+        antigo->tamanho_programa = cpu->tamanho_programa;
+        antigo->variaveis = cpu->variaveis;
+        antigo->num_variaveis = cpu->num_variaveis;
+    }
+
+    if (indice_novo >= 0 && indice_novo < MAX_PROCESSOS) {
+        ProcessoSimulado *novo = &tabela->processos[indice_novo];
+        cpu->programa = novo->programa;
+        cpu->tamanho_programa = novo->tamanho_programa;
+        cpu->pc = novo->pc;
+        cpu->variaveis = novo->variaveis;
+        cpu->num_variaveis = novo->num_variaveis;
+        cpu->quantum = obter_quantum(novo->prioridade);
+        cpu->tempo_usado_quantum = 0;
+    } else {
+        cpu->programa = NULL;
+        cpu->tamanho_programa = 0;
+        cpu->pc = 0;
+        cpu->variaveis = NULL;
+        cpu->num_variaveis = 0;
+        cpu->quantum = 0;
+        cpu->tempo_usado_quantum = 0;
+    }
 }
 
-/**
- * Atualiza processos bloqueados.
- *
- * TODO: Implementar:
- *
- *   Para cada processo na fila de bloqueados:
- *     1. Decrementar tempo_bloqueio
- *     2. Se tempo_bloqueio == 0:
- *        - Remover da fila de bloqueados
- *        - Mudar estado para PRONTO
- *        - Enfileirar na fila de prontos (com sua prioridade)
- */
 void atualizar_bloqueados(TabelaDeProcessos *tabela,
                           EstadoPronto *pronto,
                           EstadoBloqueado *bloqueado) {
-    /* Stub: a ser implementado */
-    (void)tabela;
-    (void)pronto;
-    (void)bloqueado;
+    if (tabela == NULL || pronto == NULL || bloqueado == NULL) return;
 
-    fprintf(stderr, "[STUB] atualizar_bloqueados: não implementado ainda\n");
+    int tamanho_inicial = bloqueado->tamanho;
+    for (int i = 0; i < tamanho_inicial; i++) {
+        int indice = desenfileirar(bloqueado);
+        if (indice < 0) break;
+
+        ProcessoSimulado *proc = &tabela->processos[indice];
+        proc->tempo_bloqueio--;
+        if (proc->tempo_bloqueio <= 0) {
+            proc->estado = PRONTO;
+            enfileirar_pronto(pronto, indice, proc->prioridade);
+        } else {
+            enfileirar(bloqueado, indice);
+        }
+    }
 }

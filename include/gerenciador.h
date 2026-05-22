@@ -24,6 +24,10 @@
  *
  * @param pipefd Array com os descritores do pipe [leitura, escrita]
  */
-void processo_gerenciador(int pipefd[], int opcao_inicial, const char *nome_arquivo_inicial);
+
+
+void processo_gerenciador(int pipefd[], const char *arquivo_init);
+
+
 
 #endif /* GERENCIADOR_H */
