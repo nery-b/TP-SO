@@ -15,6 +15,8 @@
 #ifndef GERENCIADOR_H
 #define GERENCIADOR_H
 
+#include "escalonador.h"
+
 /**
  * Executa o loop principal do processo gerenciador.
  *
@@ -23,11 +25,10 @@
  * de comandos recebidos pelo pipe.
  *
  * @param pipefd Array com os descritores do pipe [leitura, escrita]
+ * @param arquivo_init Nome do arquivo do programa inicial
+ * @param politica Política de escalonamento selecionada
  */
-
-
-void processo_gerenciador(int pipefd[], const char *arquivo_init);
-
-
+void processo_gerenciador(int pipefd[], const char *arquivo_init,
+                          PoliticaEscalonamento politica);
 
 #endif /* GERENCIADOR_H */

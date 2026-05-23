@@ -12,59 +12,55 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "escalonador.h"
 
-/**
- * Realiza o escalonamento após cada unidade de tempo.
- *
- * TODO: Implementar a lógica MLFQ:
- *
- *   1. Incrementar tempo_usado_quantum da CPU
- *   2. Se quantum expirou:
- *      a. Diminuir prioridade do processo (min 3)
- *      b. Salvar estado (trocar_contexto)
- *      c. Mover processo para fila de prontos
- *      d. Selecionar próximo processo
- *   3. Se processo bloqueou (antes do quantum expirar):
- *      a. Aumentar prioridade do processo (max 0)
- *   4. Atualizar processos bloqueados (decrementar tempo)
- */
 static int prioridade_mais_alta_pronto(EstadoPronto *pronto) {
-    if (pronto == NULL) return -1;
+    if (pronto == NULL) {
+        return -1;
+    }
 
     for (int p = 0; p < NUM_PRIORIDADES; p++) {
         if (!fila_vazia(&pronto->filas[p])) {
             return p;
         }
     }
+
     return -1;
 }
 
 void escalonar(Cpu *cpu, TabelaDeProcessos *tabela,
                EstadoPronto *pronto, EstadoBloqueado *bloqueado,
-               EstadoExecucao *execucao) {
-    if (cpu == NULL || tabela == NULL || pronto == NULL || bloqueado == NULL || execucao == NULL) {
+               EstadoExecucao *execucao, PoliticaEscalonamento politica) {
+    if (cpu == NULL || tabela == NULL || pronto == NULL ||
+        bloqueado == NULL || execucao == NULL) {
         return;
     }
+
+    (void)bloqueado;
 
     int indice_antigo = execucao->indice;
     if (indice_antigo >= 0 && indice_antigo < MAX_PROCESSOS) {
         ProcessoSimulado *proc = &tabela->processos[indice_antigo];
-        int top_prioridade = prioridade_mais_alta_pronto(pronto);
 
-        if (top_prioridade >= 0 && top_prioridade < proc->prioridade) {
-            proc->estado = PRONTO;
-            enfileirar_pronto(pronto, indice_antigo, proc->prioridade);
-            execucao->indice = -1;
-        } else if (cpu->tempo_usado_quantum >= cpu->quantum) {
-            if (proc->prioridade < NUM_PRIORIDADES - 1) {
-                proc->prioridade++;
+        if (politica == POLITICA_MLFQ) {
+            int top_prioridade = prioridade_mais_alta_pronto(pronto);
+
+            if (top_prioridade >= 0 && top_prioridade < proc->prioridade) {
+                proc->estado = PRONTO;
+                enfileirar_pronto(pronto, indice_antigo, proc->prioridade);
+                execucao->indice = -1;
+            } else if (cpu->tempo_usado_quantum >= cpu->quantum) {
+                if (proc->prioridade < NUM_PRIORIDADES - 1) {
+                    proc->prioridade++;
+                }
+                proc->estado = PRONTO;
+                enfileirar_pronto(pronto, indice_antigo, proc->prioridade);
+                execucao->indice = -1;
             }
+        } else if (cpu->tempo_usado_quantum >= cpu->quantum) {
             proc->estado = PRONTO;
-            enfileirar_pronto(pronto, indice_antigo, proc->prioridade);
+            enfileirar_pronto(pronto, indice_antigo, 0);
             execucao->indice = -1;
         }
     }
