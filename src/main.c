@@ -1,30 +1,60 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
 
 #include "controle.h"
 #include "gerenciador.h"
+#include "escalonador.h"
 
 int main(void) {
     int pipefd[2];
     pid_t pid;
 
     char arquivo_init[256] = "teste.txt";
+    char primeiro_token[256] = "";
     int origem_comandos = 1;
     char arquivo_comandos[256] = "";
+    int escolha_politica = 0;
+    PoliticaEscalonamento politica = POLITICA_MLFQ;
 
     printf("=== Simulador de Gerenciamento de Processos ===\n\n");
 
-    /* 1. Coleta o arquivo do programa inicial */
-    printf("Digite o nome do arquivo do programa inicial (ex: teste.txt): ");
-    scanf("%255s", arquivo_init);
+    if (isatty(STDIN_FILENO)) {
+        printf("Politica de escalonamento:\n");
+        printf("  1 — FIFO\n");
+        printf("  2 — MLFQ\n");
+        printf("Escolha: ");
+        while (scanf("%d", &escolha_politica) != 1 ||
+               (escolha_politica != 1 && escolha_politica != 2)) {
+            printf("Escolha invalida. Digite 1 para FIFO ou 2 para MLFQ: ");
+            int ch;
+            while ((ch = getchar()) != '\n' && ch != EOF) {}
+        }
+        politica = (escolha_politica == 1) ? POLITICA_FIFO : POLITICA_MLFQ;
 
-    /* 2. Coleta a forma de envio dos comandos U, I, M */
-    printf("\nOrigem dos comandos de controle (U, I, M):\n");
-    printf("  1 — Digitar no terminal (interativo)\n");
-    printf("  2 — Ler de um arquivo de comandos\n");
-    printf("Escolha: ");
+        printf("Digite o nome do arquivo do programa inicial (ex: teste.txt): ");
+        scanf("%255s", arquivo_init);
+    } else if (scanf("%255s", primeiro_token) == 1) {
+        if (strcmp(primeiro_token, "1") == 0 || strcmp(primeiro_token, "2") == 0) {
+            politica = (strcmp(primeiro_token, "1") == 0) ? POLITICA_FIFO : POLITICA_MLFQ;
+            if (scanf("%255s", arquivo_init) != 1) {
+                strcpy(arquivo_init, "teste.txt");
+            }
+        } else {
+            strncpy(arquivo_init, primeiro_token, sizeof(arquivo_init) - 1);
+            arquivo_init[sizeof(arquivo_init) - 1] = '\0';
+        }
+    }
+
+    if (isatty(STDIN_FILENO)) {
+        printf("\nOrigem dos comandos de controle (U, I, M):\n");
+        printf("  1 — Digitar no terminal (interativo)\n");
+        printf("  2 — Ler de um arquivo de comandos\n");
+        printf("Escolha: ");
+    }
+
     if (scanf("%d", &origem_comandos) != 1) origem_comandos = 1;
 
     if (origem_comandos == 2) {
@@ -45,12 +75,10 @@ int main(void) {
     }
 
     if (pid == 0) {
-        /* Processo filho → gerenciador */
-        processo_gerenciador(pipefd, arquivo_init);
+        processo_gerenciador(pipefd, arquivo_init, politica);
     } else {
-        /* Processo pai → controle */
         processo_controle(pipefd, origem_comandos, arquivo_comandos);
-        wait(NULL); 
+        wait(NULL);
     }
 
     return EXIT_SUCCESS;

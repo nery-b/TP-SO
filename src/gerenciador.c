@@ -12,7 +12,8 @@
 
 #define TAMANHO_BUFFER 256
 
-void processo_gerenciador(int pipefd[], const char *arquivo_init) {
+void processo_gerenciador(int pipefd[], const char *arquivo_init,
+                          PoliticaEscalonamento politica) {
     char comando;
     char nome_arquivo[TAMANHO_BUFFER];
 
@@ -63,7 +64,9 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init) {
     cpu.tempo_usado_quantum = 0;
     execucao.indice = idx;
 
-    printf("Gerenciador pronto. Programa '%s' carregado.\n\n", nome_arquivo);
+    printf("Gerenciador pronto. Programa '%s' carregado.\n", nome_arquivo);
+    printf("Politica de escalonamento: %s\n\n",
+           politica == POLITICA_FIFO ? "FIFO" : "MLFQ");
 
     while (read(pipefd[0], &comando, sizeof(char)) > 0) {
         switch (comando) {
@@ -100,11 +103,13 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init) {
 
                             cpu.tempo_usado_quantum++;
                             if (cpu.tempo_usado_quantum >= cpu.quantum) {
-                                if (proc->prioridade < NUM_PRIORIDADES - 1) {
+                                if (politica == POLITICA_MLFQ &&
+                                    proc->prioridade < NUM_PRIORIDADES - 1) {
                                     proc->prioridade++;
                                 }
                                 proc->estado = PRONTO;
-                                enfileirar_pronto(&pronto, idx_atual, proc->prioridade);
+                                enfileirar_pronto(&pronto, idx_atual,
+                                                  politica == POLITICA_FIFO ? 0 : proc->prioridade);
                                 execucao.indice = -1;
                             }
                         } else if (res == EXEC_BLOQUEIO) {
@@ -113,7 +118,9 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init) {
                             proc->num_variaveis = cpu.num_variaveis;
                             proc->estado = BLOQUEADO;
                             enfileirar(&bloqueado, idx_atual);
-                            if (proc->prioridade > 0) proc->prioridade--;
+                            if (politica == POLITICA_MLFQ && proc->prioridade > 0) {
+                                proc->prioridade--;
+                            }
                             execucao.indice = -1;
                         } else if (res == EXEC_TERMINO) {
                             proc->pc = cpu.pc;
@@ -126,7 +133,8 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init) {
                 }
 
                 atualizar_bloqueados(&tabela, &pronto, &bloqueado);
-                escalonar(&cpu, &tabela, &pronto, &bloqueado, &execucao);
+                escalonar(&cpu, &tabela, &pronto, &bloqueado, &execucao,
+                          politica);
                 break;
             }
             case 'I':
