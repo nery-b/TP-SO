@@ -29,22 +29,23 @@
  * Tipo de política de escalonamento.
  */
 typedef enum {
-    POLITICA_MLFQ,    /**< Multi-Level Feedback Queue (obrigatória) */
-    POLITICA_CUSTOM   /**< Política customizada do grupo */
+    POLITICA_FIFO,
+    POLITICA_MLFQ
 } PoliticaEscalonamento;
 
 /**
  * Realiza o escalonamento após cada unidade de tempo (comando U).
  *
- * Verifica se o quantum do processo em execução expirou, atualiza
- * prioridades, desbloqueia processos cujo tempo de bloqueio expirou,
- * e seleciona o próximo processo a executar.
+ * Dependendo da política selecionada, o processo em execução pode
+ * ser mantido no CPU ou ser reenfileirado com base na fila de
+ * prontos e na prioridade.
  *
  * @param cpu       Ponteiro para a CPU
  * @param tabela    Ponteiro para a TabelaDeProcessos
  * @param pronto    Ponteiro para a fila de prontos
  * @param bloqueado Ponteiro para a fila de bloqueados
  * @param execucao  Ponteiro para o estado de execução
+ * @param politica  Política de escalonamento usada nesta execução
  */
 void escalonar(Cpu *cpu, TabelaDeProcessos *tabela,
                EstadoPronto *pronto, EstadoBloqueado *bloqueado,

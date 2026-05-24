@@ -63,7 +63,9 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init, int modo_impre
     cpu.tempo_usado_quantum = 0;
     execucao.indice = idx;
 
-    printf("Gerenciador pronto. Programa '%s' carregado.\n\n", nome_arquivo);
+    printf("Gerenciador pronto. Programa '%s' carregado.\n", nome_arquivo);
+    printf("Politica de escalonamento: %s\n\n",
+           politica == POLITICA_FIFO ? "FIFO" : "MLFQ");
 
     while (read(pipefd[0], &comando, sizeof(char)) > 0) {
         switch (comando) {
@@ -104,7 +106,8 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init, int modo_impre
                                     proc->prioridade++;
                                 }
                                 proc->estado = PRONTO;
-                                enfileirar_pronto(&pronto, idx_atual, proc->prioridade);
+                                enfileirar_pronto(&pronto, idx_atual,
+                                                  politica == POLITICA_FIFO ? 0 : proc->prioridade);
                                 execucao.indice = -1;
                             }
                         } else if (res == EXEC_BLOQUEIO) {

@@ -4,5 +4,6 @@ V 0 1
 F 1
 A 0 10
 R tests/programa_substituto.txt
+B 2
 A 0 5
 T
