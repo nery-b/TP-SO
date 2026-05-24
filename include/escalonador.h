@@ -49,7 +49,7 @@ typedef enum {
  */
 void escalonar(Cpu *cpu, TabelaDeProcessos *tabela,
                EstadoPronto *pronto, EstadoBloqueado *bloqueado,
-               EstadoExecucao *execucao, PoliticaEscalonamento politica);
+               EstadoExecucao *execucao, int modo_escalonamento);
 
 /**
  * Realiza a troca de contexto entre dois processos simulados.

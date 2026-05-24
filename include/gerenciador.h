@@ -28,7 +28,10 @@
  * @param arquivo_init Nome do arquivo do programa inicial
  * @param politica Política de escalonamento selecionada
  */
-void processo_gerenciador(int pipefd[], const char *arquivo_init,
-                          PoliticaEscalonamento politica);
+
+
+void processo_gerenciador(int pipefd[], const char *arquivo_init, int modo_impressao, int modo_escalonamento);
+
+
 
 #endif /* GERENCIADOR_H */
