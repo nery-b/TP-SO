@@ -12,7 +12,7 @@
 
 #define TAMANHO_BUFFER 256
 
-void processo_gerenciador(int pipefd[], const char *arquivo_init) {
+void processo_gerenciador(int pipefd[], const char *arquivo_init, int modo_impressao, int modo_escalonamento) {
     char comando;
     char nome_arquivo[TAMANHO_BUFFER];
 
@@ -99,7 +99,7 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init) {
                             proc->num_variaveis = cpu.num_variaveis;
 
                             cpu.tempo_usado_quantum++;
-                            if (cpu.tempo_usado_quantum >= cpu.quantum) {
+                            if (modo_escalonamento == 2 && cpu.tempo_usado_quantum >= cpu.quantum) {
                                 if (proc->prioridade < NUM_PRIORIDADES - 1) {
                                     proc->prioridade++;
                                 }
@@ -113,7 +113,7 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init) {
                             proc->num_variaveis = cpu.num_variaveis;
                             proc->estado = BLOQUEADO;
                             enfileirar(&bloqueado, idx_atual);
-                            if (proc->prioridade > 0) proc->prioridade--;
+                            if (modo_escalonamento == 2 && proc->prioridade > 0) proc->prioridade--;
                             execucao.indice = -1;
                         } else if (res == EXEC_TERMINO) {
                             proc->pc = cpu.pc;
@@ -126,17 +126,25 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init) {
                 }
 
                 atualizar_bloqueados(&tabela, &pronto, &bloqueado);
-                escalonar(&cpu, &tabela, &pronto, &bloqueado, &execucao);
+                escalonar(&cpu, &tabela, &pronto, &bloqueado, &execucao, modo_escalonamento);
                 break;
             }
             case 'I':
                 printf("\n[t=%d] Imprimindo estado do sistema...\n", tempo);
-                criar_thread_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
+                if (modo_impressao == 1) {
+                    criar_processo_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
+                } else {
+                    criar_thread_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
+                }
                 break;
 
             case 'M':
                 printf("\n[t=%d] Encerrando simulador e exibindo estatísticas finais...\n", tempo);
-                criar_thread_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
+                if (modo_impressao == 1) {
+                    criar_processo_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
+                } else {
+                    criar_thread_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
+                }
                 goto fim_loop;
         }
     }

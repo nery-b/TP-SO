@@ -45,7 +45,7 @@ static int prioridade_mais_alta_pronto(EstadoPronto *pronto) {
 
 void escalonar(Cpu *cpu, TabelaDeProcessos *tabela,
                EstadoPronto *pronto, EstadoBloqueado *bloqueado,
-               EstadoExecucao *execucao) {
+               EstadoExecucao *execucao, int modo_escalonamento) {
     if (cpu == NULL || tabela == NULL || pronto == NULL || bloqueado == NULL || execucao == NULL) {
         return;
     }
@@ -55,17 +55,19 @@ void escalonar(Cpu *cpu, TabelaDeProcessos *tabela,
         ProcessoSimulado *proc = &tabela->processos[indice_antigo];
         int top_prioridade = prioridade_mais_alta_pronto(pronto);
 
-        if (top_prioridade >= 0 && top_prioridade < proc->prioridade) {
-            proc->estado = PRONTO;
-            enfileirar_pronto(pronto, indice_antigo, proc->prioridade);
-            execucao->indice = -1;
-        } else if (cpu->tempo_usado_quantum >= cpu->quantum) {
-            if (proc->prioridade < NUM_PRIORIDADES - 1) {
-                proc->prioridade++;
+        if (modo_escalonamento == 2) {
+            if (top_prioridade >= 0 && top_prioridade < proc->prioridade) {
+                proc->estado = PRONTO;
+                enfileirar_pronto(pronto, indice_antigo, proc->prioridade);
+                execucao->indice = -1;
+            } else if (cpu->tempo_usado_quantum >= cpu->quantum) {
+                if (proc->prioridade < NUM_PRIORIDADES - 1) {
+                    proc->prioridade++;
+                }
+                proc->estado = PRONTO;
+                enfileirar_pronto(pronto, indice_antigo, proc->prioridade);
+                execucao->indice = -1;
             }
-            proc->estado = PRONTO;
-            enfileirar_pronto(pronto, indice_antigo, proc->prioridade);
-            execucao->indice = -1;
         }
     }
 

@@ -26,7 +26,7 @@
  */
 
 
-void processo_gerenciador(int pipefd[], const char *arquivo_init);
+void processo_gerenciador(int pipefd[], const char *arquivo_init, int modo_impressao, int modo_escalonamento);
 
 
 

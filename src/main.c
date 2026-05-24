@@ -13,6 +13,7 @@ int main(void) {
     char arquivo_init[256] = "teste.txt";
     int origem_comandos = 1;
     char arquivo_comandos[256] = "";
+    int modo_impressao = 2;
 
     printf("=== Simulador de Gerenciamento de Processos ===\n\n");
 
@@ -31,6 +32,22 @@ int main(void) {
         printf("Digite o nome do arquivo de comandos: ");
         scanf("%255s", arquivo_comandos);
     }
+    
+    /* 3. Coleta o modo de impressão */
+    printf("\nModo de execução da impressão do estado:\n");
+    printf("  1 — Processo filho (fork)\n");
+    printf("  2 — Thread (pthread)\n");
+    printf("Escolha: ");
+    if (scanf("%d", &modo_impressao) != 1) modo_impressao = 2;
+
+    /* 4. Coleta o modo de escalonamento */
+    int modo_escalonamento = 2;
+    printf("\nModo de Escalonamento:\n");
+    printf("  1 — FIFO (First-In, First-Out sem preempção)\n");
+    printf("  2 — MLFQ (Modo do Professor)\n");
+    printf("Escolha: ");
+    if (scanf("%d", &modo_escalonamento) != 1) modo_escalonamento = 2;
+
     printf("\n");
 
     if (pipe(pipefd) == -1) {
@@ -46,7 +63,7 @@ int main(void) {
 
     if (pid == 0) {
         /* Processo filho → gerenciador */
-        processo_gerenciador(pipefd, arquivo_init);
+        processo_gerenciador(pipefd, arquivo_init, modo_impressao, modo_escalonamento);
     } else {
         /* Processo pai → controle */
         processo_controle(pipefd, origem_comandos, arquivo_comandos);
