@@ -16,7 +16,7 @@
 # ============================================================================
 
 CC       = gcc
-CFLAGS   = -Wall -Wextra -g -std=c11
+CFLAGS   = -Wall -Wextra -g -std=c11 -pthread
 INCDIR   = include
 SRCDIR   = src
 TESTDIR  = tests

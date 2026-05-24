@@ -131,12 +131,12 @@ void processo_gerenciador(int pipefd[], const char *arquivo_init) {
             }
             case 'I':
                 printf("\n[t=%d] Imprimindo estado do sistema...\n", tempo);
-                criar_processo_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
+                criar_thread_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
                 break;
 
             case 'M':
                 printf("\n[t=%d] Encerrando simulador e exibindo estatísticas finais...\n", tempo);
-                criar_processo_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
+                criar_thread_impressao(&tabela, &pronto, &bloqueado, &execucao, &cpu, tempo);
                 goto fim_loop;
         }
     }

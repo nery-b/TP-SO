@@ -23,9 +23,7 @@
 
 /**
  * Cria um processo filho (fork) para imprimir o estado do sistema.
- *
- * O processo pai (gerenciador) aguarda a conclusão do processo de
- * impressão antes de continuar processando comandos.
+ * Mantido como opção legada para fins de demonstração (fork vs pthread).
  *
  * @param tabela    Ponteiro para a TabelaDeProcessos
  * @param pronto    Ponteiro para a fila de prontos
@@ -40,6 +38,26 @@ void criar_processo_impressao(TabelaDeProcessos *tabela,
                               EstadoExecucao *execucao,
                               Cpu *cpu,
                               int tempo);
+
+/**
+ * Cria uma thread para imprimir o estado do sistema.
+ *
+ * A thread pai (gerenciador) aguarda a conclusão da thread de
+ * impressão antes de continuar processando comandos.
+ *
+ * @param tabela    Ponteiro para a TabelaDeProcessos
+ * @param pronto    Ponteiro para a fila de prontos
+ * @param bloqueado Ponteiro para a fila de bloqueados
+ * @param execucao  Ponteiro para o estado de execução
+ * @param cpu       Ponteiro para a CPU
+ * @param tempo     Tempo atual do simulador
+ */
+void criar_thread_impressao(TabelaDeProcessos *tabela,
+                            EstadoPronto *pronto,
+                            EstadoBloqueado *bloqueado,
+                            EstadoExecucao *execucao,
+                            Cpu *cpu,
+                            int tempo);
 
 /**
  * Imprime o estado completo do sistema na saída padrão.
